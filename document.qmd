@@ -15,6 +15,21 @@ Natural Language Processing (NLP) projects often depend on the availability and 
 
 The primary goal is to illustrate a set of tools that you might not be familiar with and illustrate how they might work together in an NLP project. Though these methods are presented in the context of a "project", depending on your context you may not use every method for every project. I will not be diving deep into the math or history of any method, but I will give general context on each one. 
 
+::: {.callout-warning appearance="simple"}
+
+## TODO
+
+Give a little more motivation. Applied projects require understanding the set of tools available and conencting them together in the right way. 
+
+Some constraints of applied projects:
+
+- We don't have perfect data.
+- We can't use SOTA models.
+- We have very little labeled data. 
+- We need to iterate quickly and find out what _doesn't_ work.
+
+:::
+
 Our example _project_ will use HappyDB [@asai2018happydb] as an example dataset. HappyDB is "a collection of happy moments described by individuals experiencing those moments." It was collected via crowd-sourcing on Amazon Mechanical Turk, where each worker was presented with the following task:
 
 > What made you happy today? Reflect on the past 24 hours, and recall three actual events that happened to you that made you happy. Write down your happy moment in a complete sentence. (Write three such moments.)
@@ -34,7 +49,6 @@ We'll start by familiarizing ourselves with this dataset. The text of a happy mo
 ```{python}
 # | label: data-read
 # | fig-subcap: "The first five rows of the HappyDB Dataset"
-# | code-summary: "Code for reading in data and displaying"
 import pandas as pd
 from IPython.display import display, Markdown
 
@@ -69,23 +83,21 @@ An intuitive EDA process with text data is to split up the text by word (tokeniz
 
 We we _embed_ a piece of text, we transform it into a fixed-size numerical vectors that's a _representation_ of that text - and that representation is called an _embedding_. These embeddings capture semantic information about the text and enable us to do interesting comparisons between texts. Metaphorically we think of embeddings as assigning an address to each _thing_ you're embedding, such that _things_ that are similar will have addresses next to each other. 
 
-Semantically meaningful embeddings were popoularized first at the word-level with the word2vec algorithm [@mikolov2013distributed]. 
+Semantically meaningful embeddings were popoularized first at the word-level with the word2vec algorithm [@mikolov2013distributed]. As an exmaple of the semantic information captured by word embeddings, it was found that they can be used to solve word analogy tasks like `King – Man + Woman = Queen`.
 
-Several approaches to generating sentence embeddings have been proposed, including:
+Since the invention of word embeddings, several approaches to generating sentence or document embeddings have been proposed, including:
 
-1. **Averaging Word Embeddings**: This technique involves averaging pre-trained word embeddings such as Word2Vec, GloVe, or FastText to create a fixed-size sentence representation. Despite its simplicity, this approach has demonstrated meaningful results in numerous NLP tasks.
+1. **Averaging Word Embeddings**: This technique involves averaging pre-trained word embeddings such as Word2Vec, GloVe, or FastText to create a fixed-size sentence representation. 
 2. **Pre-trained Language Models**: By leveraging transformer-based architectures, pre-trained language models such as BERT, GPT, and RoBERTa generate context-aware sentence embeddings. These models have achieved state-of-the-art performance in a wide range of NLP benchmarks.
 3. **Custom Embedding Models**: In certain cases, training a custom model tailored to a specific dataset or task may be beneficial. Siamese networks and triplet networks are examples of architectures designed for learning sentence embeddings optimized for similarity measures.
 
-In the context of labeled data collection, sentence embeddings can significantly enhance the sampling and annotation process. For example, they can aid in identifying similar examples in a dataset, which in turn allows the creation of diverse and representative samples for annotation. Additionally, embeddings can facilitate active learning by selecting the most informative examples for annotation, optimizing the labeling effort and maximizing model performance.
+For our use case, we'll use a pre-trained sentence embedding model from the `sentence-transformers` python library. 
 
-### Preprocessing
-The amount of preprocessing you want to do will depend on your data, but it is important to make sure it's consistent. For this case, we'll simply lowercase all of the texts. One thing you do **not** want to do is remove stopwords or lemmatize. When using pre-trained models, you want your texts to be as close to the training data as possible. 
+The amount of preprocessing you want to do will depend on your data, but it is important to make sure it's consistent. For this case, we'll simply lowercase all of the texts. One thing you do **not** want to do is remove stopwords or lemmatize. When using pre-trained models, you want your texts to be as close as possible to the training data used for those models. 
 
 ```{python}
 # | label: embedding-similarity
 # | fig-subcap: "Similarity values of sentence-embedding pairs"
-# | code-summary: "Code for Embedding Texts"
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.util import cos_sim
 
@@ -110,20 +122,18 @@ for i in range(len(sample_sims) - 1):
 sample_sims_df = pd.DataFrame(
     all_sentence_combinations, columns=["sim", "sentence1", "sentence2"]
 )
-sample_sims_df.sort_values("sim", ascending=False).head(3).round(2)
+display(sample_sims_df.sort_values("sim", ascending=False).head(3).round(2))
 ```
-
 
 ## Dimensionality Reduction
 
-Dimensionality reduction plays a crucial role in the analysis and visualization of high-dimensional sentence embeddings. By reducing the number of dimensions while preserving the underlying structure and relationships between data points, dimensionality reduction techniques can transform sentence embeddings into a more compact and interpretable representation.  These methods help in identifying patterns, clusters, or relationships in the data, which can inform decisions related to data sampling, annotation, and model training. 
+Dimensionality reduction allows us to project the embeddings down to a reasonable number of dimensions so we can visualize the data and avoid the curse of dimensionality. The goal of dimensionality reduction is to produce a lower-dimensionality representation of high dimensionality data, while retaining both global and local structure of the data. We'll be using TSNE (t-distributed stochastic neighbor embedding) as our dimensionality reduction algorithm. ^[[UMAP](https://umap-learn.readthedocs.io/en/latest/): Uniform Manifold Approximation and Projection is another popular dimensionality reduction tool.]  
 
-We'll be using TSNE (t-distributed stochastic neighbor embedding).
-
+In the @fig-umap-embeddings figure below, we display a scatterplot of our embedded texts after they have been run through TSNE.
 
 ```{python}
-# | label: umap-embeddings
-# | fig-subcap: "A plot of HappyDB text embeddings run through TSNE with cosine similarity"
+# | label: fig-umap-embeddings
+# | fig-subcap: "A plot of HappyDB text embeddings run through TSNE with the cosine similarity metric"
 from openTSNE import TSNE
 import plotly.express as px
 
@@ -190,9 +200,6 @@ fig = px.scatter(
     df_annotated,
     x="c1",
     y="c2",
-    hover_data=[
-        "cleaned_hm",
-    ],
     color="selected",
     render_mode="webgl",
 )
@@ -207,7 +214,8 @@ fig = fig.update_traces(
     selector={"name": "True"},
     overwrite=True,
 )
-
+# We won't show the hover tooltip on this one, it saves some space in the output
+fig.update_traces(hoverinfo="skip", hovertemplate=None)
 fig.show()
 ```
 
@@ -243,7 +251,7 @@ display(selected_sorted.tail(5))
 
 ### Correction & Label Ordering
 
-When annotating data, it's important to consider how the 'task' is presented and framed to the annotator. One way to make annotation more efficient is to reframe the task as correction-oriented process rather than a "blank slate" decision-making process. With binary tasks, this can involve presenting the annotator with a pre-made decision and asking for their approval or correction. For tasks multi-class/choice tasks, the strategy can be refined further. Instead of having the annotator choose from a fixed, consistently ordered list of labels, the set of of label options can be dynamically sorted and narrowed down to a subset of most relevant labels.
+When annotating data, it's important to consider how the _task_ is presented and framed to the annotator. One way to make annotation more efficient is to reframe the task as correction-oriented process rather than a "blank slate" decision-making process. With binary tasks, this can involve presenting the annotator with a pre-made decision and asking for their approval or correction. For tasks multi-class/choice tasks, the strategy can be refined further. Instead of having the annotator choose from a fixed, consistently ordered list of labels, the set of of label options can be dynamically sorted and narrowed down to a subset of most relevant labels.
 
 As an example, we took a similar approach for labeling offense descriptions from criminal justice data systems into one of 75 categories. In our approach, we initially present the annotator with the top 5 categories as predicted by a machine learning model, ordered by predicted probability. In 80% of instances, annotators selected one of these top 5 predicted categories. If a text can't be assigned one of the 5 categories presented, it gets funneled into a dataset to be labeled with the full set of labels. This two-stage process streamlines the annotation process and enhances its efficiency.
 
@@ -264,11 +272,6 @@ The use of multiple annotators also allows for the calculation of inter-annotato
 
 Many projects and datasets do employ multiple annotators, but do not provide individual annotator decisions (including HappyDB). Including such data when available can add an additional layer of transparency and accountability to the annotation process, and it also makes your data avaialable to be used in newer models that incorporate multiple annotations.
 
-## Intermission: Reflection
-What are we doing?
-
-Let's assume we're interested in this task of predicting which of the six categories a happy moment fits into. Let's pretend we don't have ANY labeled data and we want to aquire some. 
-
 
 ## Few Shot Learning w/ SetFit
 
@@ -286,11 +289,11 @@ After you do this process to get a paired similarity dataset, you can fine-tune 
 
 Once you fine-tune your embeddings, you can then use those new embeddings as features and put any exising classification model, like logistic regression on top of that. This is usually called the 'head' of the model.^[A terminology note: doing this process without fine-tuning the embeddings is often called 'linear probe' in the literature. This is also a good baseline approach if you do not want to fine-tune.]
 
-![SetFit Performance on Customer Reviews (Sentiment)](https://huggingface.co/blog/assets/103_setfit/setfit_curves.png)
-
-!["SetFit Architecture"](https://github.com/huggingface/setfit/blob/main/assets/setfit.png?raw=true)
+![SetFit Performance on Customer Reviews (Sentiment)](https://huggingface.co/blog/assets/103_setfit/setfit_curves.png){width=300}
 
 ```{python}
+# | label: train-setfit
+# | include: false
 from datasets import Dataset
 from sentence_transformers.losses import CosineSimilarityLoss
 from setfit import SetFitModel, SetFitTrainer, sample_dataset
@@ -312,7 +315,7 @@ eval_dataset = Dataset.from_pandas(
 )
 
 
-model = SetFitModel.from_pretrained("sentence-transformers/paraphrase-MiniLM-L12-v2")
+model = SetFitModel.from_pretrained("sentence-transformers/paraphrase-MiniLM-L6-v2")
 
 # Create trainer
 trainer = SetFitTrainer(
@@ -334,6 +337,10 @@ trainer.train()
 
 preds = model(eval_df["cleaned_hm"].tolist())
 
+```
+
+```{python}
+# | fig-subcap: "SetFit Performance"
 print(classification_report(eval_df["ground_truth_category"], preds))
 ```
 
@@ -344,12 +351,19 @@ Let's imagine our annotation campaign is over and we have our full, annotated da
 
 In order to do confident learning you need two things: a labeled dataset and a predictive model to generate out-of-sample predicted probabilities for each example. Typically this is done similar to cross-validation where you train on one set of your data and predict on another. We'll do 5-fold cross validation.
 
-It will be helpful to have a model that can train quickly, since we have to train 5 instances of it. We'll choose a `FastText` model, which uses word and sub-word embeddings and then has a simple classifier head that averages all embeddings over a document [@joulin2016bag].^[`FastText` is also a good baseline choice and is particularly effective if your texts have inconsistency in spelling.]
+It will be helpful to have a model that can train quickly, since we have to train 5 instances of it. We'll choose a `FastText` model, which uses word and sub-word embeddings, and then use the average of a documents word embeddings as a document's feature set to classify thsoe documents [@joulin2016bag].^[`FastText` is also a good baseline choice and is particularly effective if your texts have inconsistency in spelling.]
 
-Issues: ontological (subset/labels not mutually exclusive), multilabel (multiple things in the ), errors.
+::: {.callout-warning appearance="simple"}
 
+## TODO
+
+Discuss various issues that labels can have: ontological (subset/labels not mutually exclusive), multilabel (multiple labels in an example), normal annotation errors.
+
+:::
 
 ```{python}
+# | label: cleanlab-train-dataset-health
+# | include: false
 from pathlib import Path
 
 import numpy as np
@@ -387,20 +401,27 @@ data_health_summary = health_summary(y_int, results, class_names=cats, verbose=F
 
 overall_health_score = data_health_summary["overall_label_health_score"]
 n_issues = data_health_summary["classes_by_label_quality"]["Label Issues"].sum()
+```
 
+```{python}
 display(Markdown(f"Health Score `(1 - estimated errors)`: {overall_health_score:.2%}"))
 display(Markdown(f"N Estimated Issues: {n_issues:,}"))
 ```
 
 ```{python}
+# | fig-subcap: "CleanLab Health Summary - Classes by Label Quality"
 display(data_health_summary["classes_by_label_quality"])
 ```
 
 ```{python}
+# | fig-subcap: "CleanLab Health Summary - Overlapping Classes"
+
 display(data_health_summary["overlapping_classes"])
 ```
 
 ```{python}
+# | fig-subcap: "Sample of Texts with Possible Label Errors"
+
 issues_ix = find_label_issues(
     y_int,
     results,
@@ -414,3 +435,15 @@ error_data = df_annotated.reset_index().iloc[issues_ix]
 with pd.option_context("max_colwidth", 88):
     display(error_data.head(15)[[text_column, target_column]])
 ```
+
+Now that we have identified observations with label issues, we have a prioritized list of examples to review that we can relabel and get an improved model 
+
+## Conclusion
+
+::: {.callout-warning appearance="simple"}
+
+## TODO
+
+Summarize and wrap up
+
+:::
