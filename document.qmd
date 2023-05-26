@@ -96,8 +96,7 @@ For our use case, we'll use a pre-trained sentence embedding model from the `sen
 The amount of preprocessing you want to do will depend on your data, but it is important to make sure it's consistent. For this case, we'll simply lowercase all of the texts. One thing you do **not** want to do is remove stopwords or lemmatize. When using pre-trained models, you want your texts to be as close as possible to the training data used for those models. 
 
 ```{python}
-# | label: embedding-similarity
-# | fig-subcap: "Similarity values of sentence-embedding pairs"
+# | include: false
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.util import cos_sim
 
@@ -122,6 +121,11 @@ for i in range(len(sample_sims) - 1):
 sample_sims_df = pd.DataFrame(
     all_sentence_combinations, columns=["sim", "sentence1", "sentence2"]
 )
+```
+
+```{python}
+# | label: embedding-similarity
+# | fig-subcap: "Similarity values of sentence-embedding pairs"
 display(sample_sims_df.sort_values("sim", ascending=False).head(3).round(2))
 ```
 
@@ -160,6 +164,7 @@ fig = px.scatter(
     ],
     opacity=0.5,
     render_mode="webgl",
+    title="Embeddings of Happy Moments after TSNE",
 )
 
 fig.show()
@@ -177,7 +182,7 @@ One important note is that it's usually easier and more computationally efficien
 
 
 ```{python}
-# | label: umap-submodular-selection
+# | label: fig-umap-submodular-selection
 # | fig-subcap: "A plot of HappyDB text embeddings with 100 examples selected with submodular sampling"
 from apricot import FacilityLocationSelection
 
@@ -202,6 +207,7 @@ fig = px.scatter(
     y="c2",
     color="selected",
     render_mode="webgl",
+    title="Embeddings of Happy Moments after TSNE, Submodular Selected Observations",
 )
 
 fig = fig.update_traces(
@@ -244,9 +250,9 @@ selected_sorted = df_annotated.sort_values("projection_1d").query("selected")[
     "cleaned_hm"
 ]
 display(Markdown("**First 5**"))
-display(selected_sorted.head(5))
+display(selected_sorted.head(5).to_frame())
 display(Markdown("**Last 5**"))
-display(selected_sorted.tail(5))
+display(selected_sorted.tail(5).to_frame())
 ```
 
 ### Correction & Label Ordering
