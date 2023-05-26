@@ -48,7 +48,7 @@ We'll start by familiarizing ourselves with this dataset. The text of a happy mo
 
 ```{python}
 # | label: data-read
-# | fig-subcap: "The first five rows of the HappyDB Dataset"
+# | fig-cap: "The first five rows of the HappyDB Dataset"
 import pandas as pd
 from IPython.display import display, Markdown
 
@@ -71,7 +71,7 @@ Next we'll view the distribution of labels for this datsaset.
 
 ```{python}
 # | label: label-distribution
-# | fig-subcap: "The distribution of labels"
+# | fig-cap: "The distribution of labels"
 display(df["ground_truth_category"].value_counts().to_frame())
 ```
 
@@ -125,7 +125,7 @@ sample_sims_df = pd.DataFrame(
 
 ```{python}
 # | label: embedding-similarity
-# | fig-subcap: "Similarity values of sentence-embedding pairs"
+# | fig-cap: "Similarity values of sentence-embedding pairs"
 display(sample_sims_df.sort_values("sim", ascending=False).head(3).round(2))
 ```
 
@@ -137,7 +137,7 @@ In the @fig-umap-embeddings figure below, we display a scatterplot of our embedd
 
 ```{python}
 # | label: fig-umap-embeddings
-# | fig-subcap: "A plot of HappyDB text embeddings run through TSNE with the cosine similarity metric"
+# | fig-cap: "A plot of HappyDB text embeddings run through TSNE with the cosine similarity metric"
 from openTSNE import TSNE
 import plotly.express as px
 
@@ -183,7 +183,7 @@ One important note is that it's usually easier and more computationally efficien
 
 ```{python}
 # | label: fig-umap-submodular-selection
-# | fig-subcap: "A plot of HappyDB text embeddings with 100 examples selected with submodular sampling"
+# | fig-cap: "A plot of HappyDB text embeddings with 100 examples selected with submodular sampling"
 from apricot import FacilityLocationSelection
 
 
@@ -346,7 +346,7 @@ preds = model(eval_df["cleaned_hm"].tolist())
 ```
 
 ```{python}
-# | fig-subcap: "SetFit Performance"
+# | fig-cap: "SetFit Performance"
 print(classification_report(eval_df["ground_truth_category"], preds))
 ```
 
@@ -415,18 +415,18 @@ display(Markdown(f"N Estimated Issues: {n_issues:,}"))
 ```
 
 ```{python}
-# | fig-subcap: "CleanLab Health Summary - Classes by Label Quality"
+# | fig-cap: "CleanLab Health Summary - Classes by Label Quality"
 display(data_health_summary["classes_by_label_quality"])
 ```
 
 ```{python}
-# | fig-subcap: "CleanLab Health Summary - Overlapping Classes"
+# | fig-cap: "CleanLab Health Summary - Overlapping Classes"
 
 display(data_health_summary["overlapping_classes"])
 ```
 
 ```{python}
-# | fig-subcap: "Sample of Texts with Possible Label Errors"
+# | fig-cap: "Sample of Texts with Possible Label Errors"
 
 issues_ix = find_label_issues(
     y_int,
