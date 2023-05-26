@@ -9,3 +9,4 @@ scikit-learn==1.2.2
 cleanlab==2.4.0
 fasttext-lite @ git+https://github.com/pmbaumgartner/fasttext-lite.git@8f277bfd2de241f981a661e122ca1250bbe8a7a2
 numpy==1.24.3
+jupyter==1.0.0
