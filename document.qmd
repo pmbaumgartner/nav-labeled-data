@@ -11,11 +11,11 @@ theme: simplex
 
 ## Introduction 
 
-(My goal is to illustrate a set of tools that you might not be familiar with and illustrate how they might work together on a typical project. Though these methods are presented in the context of a "project", I hesitate to call this a workflow as you may not use every method for every project. I will not be diving deep into the math or history of any method, but I will give general context on each one. )
+Natural Language Processing (NLP) projects often depend on the availability and quality of labeled data for supervised learning. Recently, the data-centric AI movement [@WhyItTime2023] has emerged as a guiding philosophy for projects, which has driven the development new methods that address various tasks within the standard supervised learning workflow. This document aims to provide an overview of these new tools by working through an example project, illustrating how these methods can help practitioners improve their data collection process.
 
-Natural Language Processing (NLP) projects often depend on the availability and quality of labeled data for supervised learning. Recently, the data-centric AI movement [@WhyItTime2023] has emerged as a guiding philosophy for projects, which has driven the development new methods that address various tasks within the standard supervised learning workflow. This paper aims to provide an overview of these new tools by working through an example project, illustrating how these methods can help practitioners optimize their data collection process. The topics covered include sentence embeddings, submodular sampling, creating better annotation experiences, using inter-annotator agreement, few-shot learning, and confident learning.
+The primary goal is to illustrate a set of tools that you might not be familiar with and illustrate how they might work together in an NLP project. Though these methods are presented in the context of a "project", depending on your context you may not use every method for every project. I will not be diving deep into the math or history of any method, but I will give general context on each one. 
 
-We'll use HappyDB [@asai2018happydb] as an example dataset for this. HappyDB is "a collection of happy moments described by individuals experiencing those moments." It was collected via crowd-sourcing on Amazon Mechanical Turk, where each worker was presented with the following task:
+Our example _project_ will use HappyDB [@asai2018happydb] as an example dataset. HappyDB is "a collection of happy moments described by individuals experiencing those moments." It was collected via crowd-sourcing on Amazon Mechanical Turk, where each worker was presented with the following task:
 
 > What made you happy today? Reflect on the past 24 hours, and recall three actual events that happened to you that made you happy. Write down your happy moment in a complete sentence. (Write three such moments.)
 
@@ -25,10 +25,16 @@ In the paper describing HappyDB, the authors perform several language related ta
 
 > We developed a multi-class classifier using Logistic Regression with a bag of words representation of happy moments as features. To obtain training data, we crowd sourced a batch of 15,000 happy moments to obtain category labels. Every happy moment was shown to 5 workers, and we only considered labels that at least 3 workers agreed on. Table 10 shows the performance of our classifier using a 5-fold cross-validation setup. ^[The HappyDB paper was released January 2018. The "Transformers revolution" didn't start until October 2018 when the BERT paper was published. However, this paper was released when methods like word embeddings were available, so it's unclear why they only apply the bag-of-words approach to classification.]
 
-![Performance measures from the HappyDB paper](table10.png){width=300}
+![Performance measures from the HappyDB paper - Table 10](table10.png){width=300}
 
 ### Dataset Introduction
+
+We'll start by familiarizing ourselves with this dataset. The text of a happy moment is contained in the `cleaned_hm` column, and the original classification in the `ground_truth_category` columns. While the authors provide over 100,000 examples in their dataset, we will filter the dataset down to only those that were originally annotated by a human.
+
 ```{python}
+# | label: data-read
+# | fig-subcap: "The first five rows of the HappyDB Dataset"
+# | code-summary: "Code for reading in data and displaying"
 import pandas as pd
 from IPython.display import display, Markdown
 
@@ -44,19 +50,28 @@ df = pd.read_csv("data/cleaned_hm.csv", dtype=dtype, usecols=dtype.keys())
 
 df_annotated = df[df["ground_truth_category"].notnull()].copy()
 
-display(df_annotated.info())
 display(df_annotated.head())
 ```
 
+Next we'll view the distribution of labels for this datsaset.
+
+```{python}
+# | label: label-distribution
+# | fig-subcap: "The distribution of labels"
+display(df["ground_truth_category"].value_counts().to_frame())
+```
+
+We'll come back to the labels later. For now, let's assume we're starting a new project and we don't have any labeled data. The first thing we would want to do with this dataset is some exploratory data analysis (EDA).
+
 ## Embedding Documents & Sentence Embeddings
 
-Embeddings transform text into fixed-size numerical vectors, have become a powerful tool for representing and comparing sentences in NLP tasks. These embeddings capture semantic information and enable efficient comparisons between sentences, thereby proving useful in various NLP tasks such as sentiment analysis, document classification, and machine translation.
+An intuitive EDA process with text data is to split up the text by word (tokenization), remove common words that provide low-information (stopwords), count those words, and review the most common words. That process works for getting aggregate information about your dataset at the word-level, but doesn't provide any document-specific information about our texts. Instead of doing that process, we're going to take a document-first approach and embed each of our texts.
 
-Metaphorically I think of embeddings as assigning an address to each _thing_ you're embedding, such that _things_ that are similar will have addresses next to each other. 
+We we _embed_ a piece of text, we transform it into a fixed-size numerical vectors that's a _representation_ of that text - and that representation is called an _embedding_. These embeddings capture semantic information about the text and enable us to do interesting comparisons between texts. Metaphorically we think of embeddings as assigning an address to each _thing_ you're embedding, such that _things_ that are similar will have addresses next to each other. 
 
-Semantically meaningfull embeddings were popoularized first at the word-level with the word2vec algorithm [@mikolov2013distributed]. 
+Semantically meaningful embeddings were popoularized first at the word-level with the word2vec algorithm [@mikolov2013distributed]. 
 
- Several approaches to generating sentence embeddings have been proposed, including:
+Several approaches to generating sentence embeddings have been proposed, including:
 
 1. **Averaging Word Embeddings**: This technique involves averaging pre-trained word embeddings such as Word2Vec, GloVe, or FastText to create a fixed-size sentence representation. Despite its simplicity, this approach has demonstrated meaningful results in numerous NLP tasks.
 2. **Pre-trained Language Models**: By leveraging transformer-based architectures, pre-trained language models such as BERT, GPT, and RoBERTa generate context-aware sentence embeddings. These models have achieved state-of-the-art performance in a wide range of NLP benchmarks.
@@ -70,7 +85,7 @@ The amount of preprocessing you want to do will depend on your data, but it is i
 ```{python}
 # | label: embedding-similarity
 # | fig-subcap: "Similarity values of sentence-embedding pairs"
-# | code-summary: "Code for Embedding  "
+# | code-summary: "Code for Embedding Texts"
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.util import cos_sim
 
