@@ -1,0 +1,11 @@
+pandas==2.0.1
+sentence-transformers==2.2.2
+openTSNE==0.7.1
+plotly==5.14.1
+apricot-select==0.6.1
+datasets==2.12.0
+setfit==0.7.0
+scikit-learn==1.2.2
+cleanlab==2.4.0
+fasttext-lite @ git+https://github.com/pmbaumgartner/fasttext-lite.git@8f277bfd2de241f981a661e122ca1250bbe8a7a2
+numpy==1.24.3
