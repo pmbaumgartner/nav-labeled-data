@@ -1,6 +1,15 @@
 ---
 title: "Navigating Labeled Data Collection: A Journey Through Recent Data-Centric Methodologies"
 abstract: "Natural Language Processing projects requiring supervised learning often face the challenge of obtaining sufficient, high-quality labeled data.  In recent years, a variety of new data-centric methodologies have emerged to address various tasks within the standard supervised learning workflow. In this presentation we'll cover this new set of tools by working through an example project, illustrating how new methods can help practitioners do more with their data. We'll cover topics like sentence embeddings, submodular sampling, creating better annotation experiences, using inter-annotator agreement, few-shot learning, and confident learning -- illustrating how these methods can improve the process of collecting high quality data."
+author: 
+  - name: Peter Baumgartner
+    orcid: 0000-0003-3117-6239
+    email: pbaumgartner@rti.org
+    url: https://www.rti.org/expert/peter-baumgartner
+    affiliations:
+      - name: RTI International
+date: now
+toc: true
 format:
   html:
     code-fold: true
@@ -13,24 +22,13 @@ theme: simplex
 
 Natural Language Processing (NLP) projects often depend on the availability and quality of labeled data for supervised learning. Recently, the data-centric AI movement [@WhyItTime2023] has emerged as a guiding philosophy for projects, which has driven the development new methods that address various tasks within the standard supervised learning workflow. This document aims to provide an overview of these new tools by working through an example project, illustrating how these methods can help practitioners improve their data collection process.
 
-The primary goal is to illustrate a set of tools that you might not be familiar with and illustrate how they might work together in an NLP project. Though these methods are presented in the context of a "project", depending on your context you may not use every method for every project. I will not be diving deep into the math or history of any method, but I will give general context on each one. 
+The primary goal is to illustrate a set of tools that and how they might work together in an NLP project. Though these methods are presented in the context of a "project", depending on your context you may not use every method for every project. I will not be diving deep into the math or history of any method, but I will give general context on each one. 
 
-::: {.callout-warning appearance="simple"}
+The success of applied NLP projects often depends on understanding the available tools and developing skill in connecting them together. In applied projects, it's often best to iterate quickly by finding out what doesn't work, understanding the constraints of your problem area, and making changes based on that information. Often applied projects don't have perfect data, use state-of-the-art models, and there is a lack of labeled data. The tools presented here will help address these points.
 
-## TODO
+### Case Study
 
-Give a little more motivation. Applied projects require understanding the set of tools available and conencting them together in the right way. 
-
-Some constraints of applied projects:
-
-- We don't have perfect data.
-- We can't use SOTA models.
-- We have very little labeled data. 
-- We need to iterate quickly and find out what _doesn't_ work.
-
-:::
-
-Our example _project_ will use HappyDB [@asai2018happydb] as an example dataset. HappyDB is "a collection of happy moments described by individuals experiencing those moments." It was collected via crowd-sourcing on Amazon Mechanical Turk, where each worker was presented with the following task:
+To help illustrate, we'll be working through an example project using HappyDB [@asai2018happydb] as an example dataset. HappyDB is "a collection of happy moments described by individuals experiencing those moments." It was collected via crowd-sourcing on Amazon Mechanical Turk, where each worker was presented with the following task:
 
 > What made you happy today? Reflect on the past 24 hours, and recall three actual events that happened to you that made you happy. Write down your happy moment in a complete sentence. (Write three such moments.)
 
@@ -47,8 +45,8 @@ In the paper describing HappyDB, the authors perform several language related ta
 We'll start by familiarizing ourselves with this dataset. The text of a happy moment is contained in the `cleaned_hm` column, and the original classification in the `ground_truth_category` columns. While the authors provide over 100,000 examples in their dataset, we will filter the dataset down to only those that were originally annotated by a human.
 
 ```{python}
-# | label: data-read
-# | fig-cap: "The first five rows of the HappyDB Dataset"
+# | label: tbl-data-read
+# | tbl-cap: "The first five rows of the HappyDB Dataset"
 import pandas as pd
 from IPython.display import display, Markdown
 
@@ -70,28 +68,24 @@ display(df_annotated.head())
 Next we'll view the distribution of labels for this datsaset.
 
 ```{python}
-# | label: label-distribution
-# | fig-cap: "The distribution of labels"
+# | label: tbl-label-distribution
+# | tbl-cap: "The distribution of labels in HappyDB"
 display(df["ground_truth_category"].value_counts().to_frame())
 ```
 
 We'll come back to the labels later. For now, let's assume we're starting a new project and we don't have any labeled data. The first thing we would want to do with this dataset is some exploratory data analysis (EDA).
 
-## Embedding Documents & Sentence Embeddings
+## Embedding Text
 
-An intuitive EDA process with text data is to split up the text by word (tokenization), remove common words that provide low-information (stopwords), count those words, and review the most common words. That process works for getting aggregate information about your dataset at the word-level, but doesn't provide any document-specific information about our texts. Instead of doing that process, we're going to take a document-first approach and embed each of our texts.
+An common EDA process with text data is to split up the text by word (tokenization), remove common words that provide low-information (stopwords), count those words, and review the most common words. That process works for getting aggregate information about your dataset at the word-level, but doesn't provide any document-specific information about our texts. Instead of doing that process, we're going to take a document-first approach and embed each of our texts.
 
-We we _embed_ a piece of text, we transform it into a fixed-size numerical vectors that's a _representation_ of that text - and that representation is called an _embedding_. These embeddings capture semantic information about the text and enable us to do interesting comparisons between texts. Metaphorically we think of embeddings as assigning an address to each _thing_ you're embedding, such that _things_ that are similar will have addresses next to each other. 
+We we _embed_ a piece of text, we transform it into a fixed-size numerical vector that's a _representation_ of that text - and that representation is called an _embedding_. These embeddings capture semantic information about the text and enable us to do interesting comparisons between texts. Metaphorically we think of embeddings as assigning an address to each _thing_ you're embedding, such that _things_ that are similar will have addresses next to each other. 
 
 Semantically meaningful embeddings were popoularized first at the word-level with the word2vec algorithm [@mikolov2013distributed]. As an exmaple of the semantic information captured by word embeddings, it was found that they can be used to solve word analogy tasks like `King – Man + Woman = Queen`.
 
-Since the invention of word embeddings, several approaches to generating sentence or document embeddings have been proposed, including:
+Since the invention of word embeddings, the approach to generating document-level embeddings have been developed. Initially, we would use pre-trained word embeddings such as Word2Vec, GloVe, or FastText and average the embeddings of each word in a piece of text to create a document embedding. There was also an approach called doc2vec which created document-specific embeddings while training a model similar to word2vec. When transformers based models like BERT were originally created, similar approaches to averaging embeddings were used - though now the word embeddings were contextual and existed as a byproduct of the task those models were trained on. Today we have a set of pre-trained models trained specifically to generate useful embeddings based on sentence similarity tasks. 
 
-1. **Averaging Word Embeddings**: This technique involves averaging pre-trained word embeddings such as Word2Vec, GloVe, or FastText to create a fixed-size sentence representation. 
-2. **Pre-trained Language Models**: By leveraging transformer-based architectures, pre-trained language models such as BERT, GPT, and RoBERTa generate context-aware sentence embeddings. These models have achieved state-of-the-art performance in a wide range of NLP benchmarks.
-3. **Custom Embedding Models**: In certain cases, training a custom model tailored to a specific dataset or task may be beneficial. Siamese networks and triplet networks are examples of architectures designed for learning sentence embeddings optimized for similarity measures.
-
-For our use case, we'll use a pre-trained sentence embedding model from the `sentence-transformers` python library. 
+For our use case, we'll use one of those pre-trained sentence embedding models from the `sentence-transformers` python library. 
 
 The amount of preprocessing you want to do will depend on your data, but it is important to make sure it's consistent. For this case, we'll simply lowercase all of the texts. One thing you do **not** want to do is remove stopwords or lemmatize. When using pre-trained models, you want your texts to be as close as possible to the training data used for those models. 
 
@@ -124,8 +118,8 @@ sample_sims_df = pd.DataFrame(
 ```
 
 ```{python}
-# | label: embedding-similarity
-# | fig-cap: "Similarity values of sentence-embedding pairs"
+# | label: tbl-embedding-similarity
+# | tbl-cap: "Similarity values of sentence-embedding pairs"
 display(sample_sims_df.sort_values("sim", ascending=False).head(3).round(2))
 ```
 
@@ -234,6 +228,12 @@ Imagine we are starting with this dataset and we want to annotate it into one of
 One easy efficiency gain would be to group the examples by similarity, so that an annotator isn't jumping from topic to topic as they go through the examples. We can do with with TSNE by projecting down to one dimension and sorting on that dimension.
 
 ```{python}
+# | label: tbl-sorted-embeddings
+# | tbl-cap: "First 5 and Last 5 Sorted Dimension Reduced Embeddings"
+# | tbl-subcap:
+# |   - "First 5"
+# |   - "Last 5"
+
 tsne_1d = TSNE(
     n_components=1,
     perplexity=500,  # higher perplexity -> prioritize global structure
@@ -246,13 +246,10 @@ projection_1d = tsne_1d.fit(embeddings)
 
 df_annotated["projection_1d"] = projection_1d.ravel()
 
-selected_sorted = df_annotated.sort_values("projection_1d").query("selected")[
-    "cleaned_hm"
-]
-display(Markdown("**First 5**"))
-display(selected_sorted.head(5).to_frame())
-display(Markdown("**Last 5**"))
-display(selected_sorted.tail(5).to_frame())
+selected_sorted = df_annotated.sort_values("projection_1d").query("selected")
+
+display(selected_sorted[["projection_1d", "cleaned_hm"]].head(5))
+display(selected_sorted[["projection_1d", "cleaned_hm"]].tail(5))
 ```
 
 ### Correction & Label Ordering
@@ -268,6 +265,14 @@ There are a few ways to do this correction and label ordering task in practice:
 3. **Weakly Supervised / Rules-Based** - Use a set of rules to define how an example should be labeled a priori. 
 4. **LLMs** - Use a LLM to make an initial label decision or ordering (see [Prodigy OpenAI recipes](https://github.com/explosion/prodigy-openai-recipes))
 
+::: {.callout-warning appearance="simple"}
+
+## TODO
+
+Illustrate this point by detailing how it would be applied to our dataset.
+
+:::
+
 ## Multiple Annotators / Inter-Annotator Agreement
 
 Employing multiple annotators is a great way to get feedback on your annotation task and prevent downstream issues with an underspecified task.
@@ -278,6 +283,13 @@ The use of multiple annotators also allows for the calculation of inter-annotato
 
 Many projects and datasets do employ multiple annotators, but do not provide individual annotator decisions (including HappyDB). Including such data when available can add an additional layer of transparency and accountability to the annotation process, and it also makes your data avaialable to be used in newer models that incorporate multiple annotations.
 
+::: {.callout-warning appearance="simple"}
+
+## TODO
+
+Either illustrate this example by calculating agreement with a new annotator (an LLM), or explain in more detail how we would use this for our case study. 
+
+:::
 
 ## Few Shot Learning w/ SetFit
 
@@ -346,8 +358,13 @@ preds = model(eval_df["cleaned_hm"].tolist())
 ```
 
 ```{python}
-# | fig-cap: "SetFit Performance"
-print(classification_report(eval_df["ground_truth_category"], preds))
+# | label: tbl-setfit-performance
+# | tbl-cap: "SetFit Performance"
+display(
+    pd.DataFrame(
+        classification_report(eval_df["ground_truth_category"], preds, output_dict=True)
+    )
+)
 ```
 
 
@@ -410,23 +427,27 @@ n_issues = data_health_summary["classes_by_label_quality"]["Label Issues"].sum()
 ```
 
 ```{python}
+display(Markdown(f"**Cleanlab Output**"))
 display(Markdown(f"Health Score `(1 - estimated errors)`: {overall_health_score:.2%}"))
 display(Markdown(f"N Estimated Issues: {n_issues:,}"))
 ```
 
 ```{python}
-# | fig-cap: "CleanLab Health Summary - Classes by Label Quality"
+# | label: tbl-cl-health-summary-classes
+# | tbl-cap: "CleanLab Health Summary - Classes by Label Quality"
 display(data_health_summary["classes_by_label_quality"])
 ```
 
 ```{python}
-# | fig-cap: "CleanLab Health Summary - Overlapping Classes"
+# | label: tbl-cl-health-summary-overlap
+# | tbl-cap: "CleanLab Health Summary - Overlapping Classes"
 
 display(data_health_summary["overlapping_classes"])
 ```
 
 ```{python}
-# | fig-cap: "Sample of Texts with Possible Label Errors"
+# | label: tbl-cl-error-examples
+# | tbl-cap: "Sample of Texts with Possible Label Errors"
 
 issues_ix = find_label_issues(
     y_int,
