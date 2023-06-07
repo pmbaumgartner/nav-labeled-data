@@ -8,6 +8,9 @@ author:
     url: https://www.rti.org/expert/peter-baumgartner
     affiliations:
       - name: RTI International
+citation:
+   type: article
+   doi: "10.5281/zenodo.8013853"
 date: now
 toc: true
 format:
@@ -20,7 +23,7 @@ theme: simplex
 
 ## Introduction 
 
-Natural Language Processing (NLP) projects often depend on the availability and quality of labeled data for supervised learning. Recently, the data-centric AI movement [@WhyItTime2023] has emerged as a guiding philosophy for projects, which has driven the development new methods that address various tasks within the standard supervised learning workflow. This document aims to provide an overview of these new tools by working through an example project, illustrating how these methods can help practitioners improve their data collection process.
+Natural Language Processing (NLP) projects often depend on the availability and quality of labeled^[In machine learning, the verb _labeling_ often refers to the process of adding some information to a piece of data, typically for classification-based supervised learning tasks. In linguistics, this process is sometimes referred to as _annotation_. In the social sciences, this is referred to as _coding_. In this document, I will interchangeably use the verbs _labeling_ and _annotation_ and nouns _labels_ and _annotations_.] data for supervised learning. Recently, the data-centric AI movement [@WhyItTime2023] has emerged as a guiding philosophy for projects, which has driven the development new methods that address various tasks within the standard supervised learning workflow. This document aims to provide an overview of these new tools by working through an example project, illustrating how these methods can help practitioners improve their data collection process.
 
 The primary goal is to illustrate a set of tools that and how they might work together in an NLP project. Though these methods are presented in the context of a "project", depending on your context you may not use every method for every project. I will not be diving deep into the math or history of any method, but I will give general context on each one. 
 
@@ -32,17 +35,15 @@ To help illustrate, we'll be working through an example project using HappyDB [@
 
 > What made you happy today? Reflect on the past 24 hours, and recall three actual events that happened to you that made you happy. Write down your happy moment in a complete sentence. (Write three such moments.)
 
-In this instance, 24 hours is the *reflection period*, and data for longer reflection periods is available.
-
 In the paper describing HappyDB, the authors perform several language related tasks on the corpus. For our purpose, we'll focus on the classification task they describe and use it as a comparison throughout the process.
 
-> We developed a multi-class classifier using Logistic Regression with a bag of words representation of happy moments as features. To obtain training data, we crowd sourced a batch of 15,000 happy moments to obtain category labels. Every happy moment was shown to 5 workers, and we only considered labels that at least 3 workers agreed on. Table 10 shows the performance of our classifier using a 5-fold cross-validation setup. ^[The HappyDB paper was released January 2018. The "Transformers revolution" didn't start until October 2018 when the BERT paper was published. However, this paper was released when methods like word embeddings were available, so it's unclear why they only apply the bag-of-words approach to classification.]
+> We developed a multi-class classifier using Logistic Regression with a bag of words representation of happy moments as features. To obtain training data, we crowd sourced a batch of 15,000 happy moments to obtain category labels. Every happy moment was shown to 5 workers, and we only considered labels that at least 3 workers agreed on. Table 10 shows the performance of our classifier using a 5-fold cross-validation setup. ^[The HappyDB paper was released January 2018. The "Transformers revolution" didn't start until October 2018 when the BERT paper was published. However, this paper was released when methods like word embeddings were available, so it's unclear why they only apply a bag-of-words approach to classification.]
 
 ![Performance measures from the HappyDB paper - Table 10](table10.png){width=300}
 
 ### Dataset Introduction
 
-We'll start by familiarizing ourselves with this dataset. The text of a happy moment is contained in the `cleaned_hm` column, and the original classification in the `ground_truth_category` columns. While the authors provide over 100,000 examples in their dataset, we will filter the dataset down to only those that were originally annotated by a human.
+We'll start by familiarizing ourselves with this dataset. The text of a happy moment is contained in the `cleaned_hm` column, and the original classification in the `ground_truth_category` columns. While the authors provide over 100,000 examples in their dataset, we will filter the dataset down to the roughly 15,000 that were originally annotated by a human.
 
 ```{python}
 # | label: tbl-data-read
@@ -77,7 +78,7 @@ We'll come back to the labels later. For now, let's assume we're starting a new 
 
 ## Embedding Text
 
-An common EDA process with text data is to split up the text by word (tokenization), remove common words that provide low-information (stopwords), count those words, and review the most common words. That process works for getting aggregate information about your dataset at the word-level, but doesn't provide any document-specific information about our texts. Instead of doing that process, we're going to take a document-first approach and embed each of our texts.
+An common EDA process with text data is to split up the text by word (tokenization), remove common words that provide low-information (stopwords), count those words, and review the most common words that are left. That process works for getting aggregate information about your dataset at the word-level, but doesn't provide any document-specific information about our texts. Instead of doing that process, we're going to take a document-first approach and embed each of our texts.
 
 We we _embed_ a piece of text, we transform it into a fixed-size numerical vector that's a _representation_ of that text - and that representation is called an _embedding_. These embeddings capture semantic information about the text and enable us to do interesting comparisons between texts. Metaphorically we think of embeddings as assigning an address to each _thing_ you're embedding, such that _things_ that are similar will have addresses next to each other. 
 
