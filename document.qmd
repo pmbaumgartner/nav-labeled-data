@@ -19,27 +19,38 @@ format:
 jupyter: python3
 bibliography: references.bib
 theme: simplex
+reference-location: margin
 ---
 
 ## Introduction 
 
-Natural Language Processing (NLP) projects often depend on the availability and quality of labeled^[In machine learning, the verb _labeling_ often refers to the process of adding some information to a piece of data, typically for classification-based supervised learning tasks. In linguistics, this process is sometimes referred to as _annotation_. In the social sciences, this is referred to as _coding_. In this document, I will interchangeably use the verbs _labeling_ and _annotation_ and nouns _labels_ and _annotations_.] data for supervised learning. Recently, the data-centric AI movement [@WhyItTime2023] has emerged as a guiding philosophy for projects, which has driven the development new methods that address various tasks within the standard supervised learning workflow. This document aims to provide an overview of these new tools by working through an example project, illustrating how these methods can help practitioners improve their data collection process.
+Natural Language Processing (NLP) projects often depend on the availability and quality of labeled^[In machine learning, the verb _labeling_ often refers to the process of adding some information to a piece of data, typically for classification-based supervised learning tasks. In linguistics, this process is sometimes referred to as _annotation_. In the social sciences, this is referred to as _coding_. In this document, I will interchangeably use the verbs _labeling_ and _annotation_ and nouns _labels_ and _annotations_.] data for supervised learning. Recently, the data-centric AI movement [@WhyItTime2023] has emerged as a guiding philosophy that has has driven the development of new methods that address various tasks within the standard supervised learning workflow. This document aims to provide an overview of these new tools by working through an example project, illustrating how these methods can help practitioners improve their data collection process.
 
 The primary goal is to illustrate a set of tools that and how they might work together in an NLP project. Though these methods are presented in the context of a "project", depending on your context you may not use every method for every project. I will not be diving deep into the math or history of any method, but I will give general context on each one. 
 
-The success of applied NLP projects often depends on understanding the available tools and developing skill in connecting them together. In applied projects, it's often best to iterate quickly by finding out what doesn't work, understanding the constraints of your problem area, and making changes based on that information. Often applied projects don't have perfect data, use state-of-the-art models, and there is a lack of labeled data. The tools presented here will help address these points.
+The success of applied NLP projects often depends on understanding the available tools and developing skill in connecting them together. In applied projects, it's often best to iterate quickly by finding out what doesn't work, understanding the constraints of your problem area, and making changes based on that information. Often applied projects don't have perfect quality data, state-of-the-art models aren't available, and there is a lack of labeled data and resources to label it. The tools presented here will help address these points.
 
 ### Case Study
 
-To help illustrate, we'll be working through an example project using HappyDB [@asai2018happydb] as an example dataset. HappyDB is "a collection of happy moments described by individuals experiencing those moments." It was collected via crowd-sourcing on Amazon Mechanical Turk, where each worker was presented with the following task:
+To help illustrate, we'll be working through an example project using HappyDB [@asai2018happydb] as a dataset. HappyDB is "a collection of happy moments described by individuals experiencing those moments." It was collected via crowd-sourcing on Amazon Mechanical Turk, where each worker was presented with the following task:
 
 > What made you happy today? Reflect on the past 24 hours, and recall three actual events that happened to you that made you happy. Write down your happy moment in a complete sentence. (Write three such moments.)
 
 In the paper describing HappyDB, the authors perform several language related tasks on the corpus. For our purpose, we'll focus on the classification task they describe and use it as a comparison throughout the process.
 
-> We developed a multi-class classifier using Logistic Regression with a bag of words representation of happy moments as features. To obtain training data, we crowd sourced a batch of 15,000 happy moments to obtain category labels. Every happy moment was shown to 5 workers, and we only considered labels that at least 3 workers agreed on. Table 10 shows the performance of our classifier using a 5-fold cross-validation setup. ^[The HappyDB paper was released January 2018. The "Transformers revolution" didn't start until October 2018 when the BERT paper was published. However, this paper was released when methods like word embeddings were available, so it's unclear why they only apply a bag-of-words approach to classification.]
+> We developed a multi-class classifier using Logistic Regression with a bag of words representation of happy moments as features. To obtain training data, we crowd sourced a batch of 15,000 happy moments to obtain category labels. Every happy moment was shown to 5 workers, and we only considered labels that at least 3 workers agreed on. [[@tbl-happy-db-10]] shows the performance of our classifier using a 5-fold cross-validation setup. ^[The HappyDB paper was released January 2018. The "Transformers revolution" didn't start until October 2018 when the BERT paper was published. However, this paper was released when methods like word embeddings were available, so it's unclear why they only apply a simple bag-of-words approach to classification.]
 
-![Performance measures from the HappyDB paper - Table 10](table10.png){width=300}
+| Category         | Precision | Recall |   F1 | % moments 24 Hrs | % moments 3 Months |
+| ---------------- | --------: | -----: | ---: | ---------------: | -----------------: |
+| Achievement      |      79.2 |   87.3 | 83.0 |             30.9 |               36.5 |
+| Affection        |      89.9 |   94.3 | 92.0 |             32.7 |               35.1 |
+| Bonding          |      91.9 |   87.1 | 89.4 |             10.4 |               10.8 |
+| Enjoy the moment |      59.2 |   49.9 | 54.0 |             13.3 |                8.9 |
+| Exercise         |      85.3 |   59.3 | 69.9 |              1.5 |                0.8 |
+| Leisure          |      77.9 |   67.2 | 72.1 |              8.7 |                6.1 |
+| Nature           |      80.9 |   52.4 | 63.4 |              2.1 |                1.5 |
+
+: Table 10 from the HappyDB Paper {#tbl-happy-db-10}
 
 ### Dataset Introduction
 
