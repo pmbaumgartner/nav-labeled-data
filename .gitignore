@@ -160,5 +160,5 @@ cython_debug/
 #.idea/
 
 document_files/
-*.html
+document.html
 .vscode/

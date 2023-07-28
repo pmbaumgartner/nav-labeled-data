@@ -74,15 +74,30 @@ df = pd.read_csv("data/cleaned_hm.csv", dtype=dtype, usecols=dtype.keys())
 
 df_annotated = df[df["ground_truth_category"].notnull()].copy()
 
-display(df_annotated.head())
+display(
+    df_annotated.head().style.set_table_styles(
+        [
+            {"selector": "th.col_heading", "props": "text-align: left;"},
+        ]
+    )
+)
 ```
 
-Next we'll view the distribution of labels for this datsaset.
+Next we'll view the distribution of labels for this dataset.
 
 ```{python}
 # | label: tbl-label-distribution
 # | tbl-cap: "The distribution of labels in HappyDB"
-display(df["ground_truth_category"].value_counts().to_frame())
+display(
+    df["ground_truth_category"]
+    .value_counts()
+    .to_frame()
+    .style.set_table_styles(
+        [
+            {"selector": "th.col_heading", "props": "text-align: left;"},
+        ]
+    )
+)
 ```
 
 We'll come back to the labels later. For now, let's assume we're starting a new project and we don't have any labeled data. The first thing we would want to do with this dataset is some exploratory data analysis (EDA).
@@ -132,7 +147,16 @@ sample_sims_df = pd.DataFrame(
 ```{python}
 # | label: tbl-embedding-similarity
 # | tbl-cap: "Similarity values of sentence-embedding pairs"
-display(sample_sims_df.sort_values("sim", ascending=False).head(3).round(2))
+display(
+    sample_sims_df.sort_values("sim", ascending=False)
+    .head(3)
+    .round(2)
+    .style.set_table_styles(
+        [
+            {"selector": "th.col_heading", "props": "text-align: left;"},
+        ]
+    )
+)
 ```
 
 ## Dimensionality Reduction
@@ -172,7 +196,7 @@ fig = px.scatter(
     render_mode="webgl",
     title="Embeddings of Happy Moments after TSNE",
 )
-
+fig.write_html("tsne-all.html")
 fig.show()
 ```
 
@@ -228,6 +252,7 @@ fig = fig.update_traces(
 )
 # We won't show the hover tooltip on this one, it saves some space in the output
 fig.update_traces(hoverinfo="skip", hovertemplate=None)
+fig.write_html("tsne-submodular.html")
 fig.show()
 ```
 
@@ -260,8 +285,26 @@ df_annotated["projection_1d"] = projection_1d.ravel()
 
 selected_sorted = df_annotated.sort_values("projection_1d").query("selected")
 
-display(selected_sorted[["projection_1d", "cleaned_hm"]].head(5))
-display(selected_sorted[["projection_1d", "cleaned_hm"]].tail(5))
+display(
+    selected_sorted[["projection_1d", "cleaned_hm"]]
+    .head(5)
+    .round(2)
+    .style.set_table_styles(
+        [
+            {"selector": "th.col_heading", "props": "text-align: left;"},
+        ]
+    )
+)
+display(
+    selected_sorted[["projection_1d", "cleaned_hm"]]
+    .tail(5)
+    .round(2)
+    .style.set_table_styles(
+        [
+            {"selector": "th.col_heading", "props": "text-align: left;"},
+        ]
+    )
+)
 ```
 
 ### Correction & Label Ordering
@@ -376,7 +419,14 @@ display(
     pd.DataFrame(
         classification_report(eval_df["ground_truth_category"], preds, output_dict=True)
     )
+    .style.format(precision=3)
+    .set_table_styles(
+        [
+            {"selector": "th.col_heading", "props": "text-align: left;"},
+        ]
+    )
 )
+
 ```
 
 
@@ -447,14 +497,30 @@ display(Markdown(f"N Estimated Issues: {n_issues:,}"))
 ```{python}
 # | label: tbl-cl-health-summary-classes
 # | tbl-cap: "CleanLab Health Summary - Classes by Label Quality"
-display(data_health_summary["classes_by_label_quality"])
+display(
+    data_health_summary["classes_by_label_quality"]
+    .style.format(precision=3)
+    .set_table_styles(
+        [
+            {"selector": "th.col_heading", "props": "text-align: left;"},
+        ]
+    )
+)
 ```
 
 ```{python}
 # | label: tbl-cl-health-summary-overlap
 # | tbl-cap: "CleanLab Health Summary - Overlapping Classes"
 
-display(data_health_summary["overlapping_classes"])
+display(
+    data_health_summary["overlapping_classes"]
+    .style.format(precision=3)
+    .set_table_styles(
+        [
+            {"selector": "th.col_heading", "props": "text-align: left;"},
+        ]
+    )
+)
 ```
 
 ```{python}
@@ -472,7 +538,15 @@ issues_ix = find_label_issues(
 error_data = df_annotated.reset_index().iloc[issues_ix]
 
 with pd.option_context("max_colwidth", 88):
-    display(error_data.head(15)[[text_column, target_column]])
+    display(
+        error_data.head(15)[[text_column, target_column]]
+        .style.format(precision=3)
+        .set_table_styles(
+            [
+                {"selector": "th.col_heading", "props": "text-align: left;"},
+            ]
+        )
+    )
 ```
 
 Now that we have identified observations with label issues, we have a prioritized list of examples to review that we can relabel and get an improved model 
