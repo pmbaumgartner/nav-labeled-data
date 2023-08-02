@@ -320,13 +320,6 @@ There are a few ways to do this correction and label ordering task in practice:
 3. **Weakly Supervised / Rules-Based** - Use a set of rules to define how an example should be labeled a priori. 
 4. **LLMs** - Use a LLM to make an initial label decision or ordering (see [Prodigy OpenAI recipes](https://github.com/explosion/prodigy-openai-recipes))
 
-::: {.callout-warning appearance="simple"}
-
-## TODO
-
-Illustrate this point by detailing how it would be applied to our dataset.
-
-:::
 
 ## Multiple Annotators / Inter-Annotator Agreement
 
@@ -338,13 +331,6 @@ The use of multiple annotators also allows for the calculation of inter-annotato
 
 Many projects and datasets do employ multiple annotators, but do not provide individual annotator decisions (including HappyDB). Including such data when available can add an additional layer of transparency and accountability to the annotation process, and it also makes your data avaialable to be used in newer models that incorporate multiple annotations.
 
-::: {.callout-warning appearance="simple"}
-
-## TODO
-
-Either illustrate this example by calculating agreement with a new annotator (an LLM), or explain in more detail how we would use this for our case study. 
-
-:::
 
 ## Few Shot Learning w/ SetFit
 
@@ -361,6 +347,8 @@ We can convert any single-text classification task into a paired classification 
 After you do this process to get a paired similarity dataset, you can fine-tune any existing embeddings. I like to imagine this process as "stretching out" the embedding space so that texts from different labels will now be further apart.
 
 Once you fine-tune your embeddings, you can then use those new embeddings as features and put any exising classification model, like logistic regression on top of that. This is usually called the 'head' of the model.^[A terminology note: doing this process without fine-tuning the embeddings is often called 'linear probe' in the literature. This is also a good baseline approach if you do not want to fine-tune.]
+
+Below we'll train a SetFit model on our 100 examples selected with submodular selection, and we'll evaluate the performance on the remainder of the dataset.
 
 ![SetFit Performance on Customer Reviews (Sentiment)](https://huggingface.co/blog/assets/103_setfit/setfit_curves.png){width=300}
 
@@ -419,6 +407,16 @@ display(
     pd.DataFrame(
         classification_report(eval_df["ground_truth_category"], preds, output_dict=True)
     )
+    .drop(["accuracy", "macro avg", "weighted avg"], axis="columns")
+    .T.assign(n_eval=lambda d: d["support"].astype(int))
+    .reset_index(names=["ground_truth_category"])
+    .merge(
+        train_df["ground_truth_category"].value_counts().to_frame(),
+        on="ground_truth_category",
+    )
+    .rename(columns={"count": "n_train"})
+    .drop(["support"], axis="columns")
+    .set_index("ground_truth_category")
     .style.format(precision=3)
     .set_table_styles(
         [
@@ -438,13 +436,6 @@ In order to do confident learning you need two things: a labeled dataset and a p
 
 It will be helpful to have a model that can train quickly, since we have to train 5 instances of it. We'll choose a `FastText` model, which uses word and sub-word embeddings, and then use the average of a documents word embeddings as a document's feature set to classify thsoe documents [@joulin2016bag].^[`FastText` is also a good baseline choice and is particularly effective if your texts have inconsistency in spelling.]
 
-::: {.callout-warning appearance="simple"}
-
-## TODO
-
-Discuss various issues that labels can have: ontological (subset/labels not mutually exclusive), multilabel (multiple labels in an example), normal annotation errors.
-
-:::
 
 ```{python}
 # | label: cleanlab-train-dataset-health
@@ -537,7 +528,7 @@ issues_ix = find_label_issues(
 
 error_data = df_annotated.reset_index().iloc[issues_ix]
 
-with pd.option_context("max_colwidth", 88):
+with pd.option_context("max_colwidth", 120):
     display(
         error_data.head(15)[[text_column, target_column]]
         .style.format(precision=3)
