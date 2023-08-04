@@ -544,10 +544,4 @@ Now that we have identified observations with label issues, we have a prioritize
 
 ## Conclusion
 
-::: {.callout-warning appearance="simple"}
-
-## TODO
-
-Summarize and wrap up
-
-:::
+With modern data-centric methods, we've achieved comparable performance to the model used in the original HappyDB paper with about 100x less training data. In addition, we've used confident learning to understand where potential label errors exist so we can refine our training data even further. This collection of data-centric methods allows for solving applied natural language processing problems with with less, higher quality data.
